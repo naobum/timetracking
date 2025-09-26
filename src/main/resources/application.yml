@@ -1,4 +1,15 @@
 spring:
     application:
         name: "TimeTracking"
-    autoconfigure.exclude: org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration
+
+    datasource:
+        url: jdbc:postgresql://localhost:5432/mydb
+        username: myuser
+        password: mypass
+    jpa:
+        hibernate:
+            ddl-auto: update
+        show-sql: true
+        properties:
+            hibernate:
+            dialect: org.hibernate.dialect.PostgreSQLDialect
