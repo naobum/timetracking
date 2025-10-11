@@ -6,11 +6,12 @@ import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+import com.kfu.timetracking.models.Student;
 import com.kfu.timetracking.models.TimeEntry;
 
 @Repository
 public interface TimeTrackingRepository extends JpaRepository<TimeEntry, Long> {
-    List<TimeEntry> findByStudentId(Long studentId);
+    List<TimeEntry> findByStudent(Student student);
 
-    Optional<TimeEntry> findByStudentIdAndEndIsNull(Long studentId);
+    Optional<TimeEntry> findByStudentAndEndIsNull(Student student);
 }

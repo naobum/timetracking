@@ -9,18 +9,20 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
-import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
 
 @Entity
 @Table(name = "time_tracking")
-@Data
+@Getter
+@Setter
 public class TimeEntry {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false)
-    private Long studentId;
+    @ManyToOne
+    private Student student;
 
     @Column(name = "task_type", nullable = false)
     private TaskType type;

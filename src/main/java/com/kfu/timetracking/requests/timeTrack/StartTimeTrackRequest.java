@@ -1,4 +1,4 @@
-package com.kfu.timetracking.requests;
+package com.kfu.timetracking.requests.timeTrack;
 
 import com.kfu.timetracking.models.TaskType;
 
