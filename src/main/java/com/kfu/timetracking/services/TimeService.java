@@ -7,16 +7,17 @@ import org.springframework.stereotype.Service;
 import com.kfu.timetracking.models.TimeEntry;
 import com.kfu.timetracking.repositories.TimeTrackingRepository;
 import com.kfu.timetracking.requests.StartTimeTrackRequest;
+import com.kfu.timetracking.requests.StopTimeTrackRequest;
 import com.kfu.timetracking.responses.time.TimeStartedResponse;
 import com.kfu.timetracking.responses.time.TimeStoppedResponse;
 
-@Service
-public class TimeService {
-    private TimeTrackingRepository repo;
+import jakarta.transaction.Transactional;
+import lombok.RequiredArgsConstructor;
 
-        public TimeService(TimeTrackingRepository repo) {
-        this.repo = repo;
-    }
+@Service
+@RequiredArgsConstructor
+public class TimeService {
+    private final TimeTrackingRepository repo;
 
     public TimeStartedResponse start(StartTimeTrackRequest request){
         // Проверка: если есть активный трекинг, не создаём новый
@@ -40,8 +41,9 @@ public class TimeService {
             timeEntry.getDescription());
     }
 
-    public TimeStoppedResponse stop(){
-        TimeEntry timeEntry = repo.findByStudentIdAndEndIsNull(null)
+    @Transactional
+    public TimeStoppedResponse stop(StopTimeTrackRequest request){
+        TimeEntry timeEntry = repo.findByStudentIdAndEndIsNull(request.getStudentId())
             .orElseThrow(() -> new IllegalStateException("Нет активного трекинга"));
         
         timeEntry.setEnd(LocalDateTime.now());

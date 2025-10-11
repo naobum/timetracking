@@ -3,6 +3,7 @@ package com.kfu.timetracking.controllers;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.kfu.timetracking.requests.StartTimeTrackRequest;
+import com.kfu.timetracking.requests.StopTimeTrackRequest;
 import com.kfu.timetracking.responses.time.TimeStartedResponse;
 import com.kfu.timetracking.responses.time.TimeStoppedResponse;
 import com.kfu.timetracking.services.TimeService;
@@ -31,9 +32,10 @@ public class TimeController {
     }
     
     @PostMapping("/stop")
-    public ResponseEntity<TimeStoppedResponse> stop() {
+    public ResponseEntity<TimeStoppedResponse> stop(@RequestBody StopTimeTrackRequest request) {
         
-        return ResponseEntity.status(HttpStatus.OK).body(timeService.stop());
+        return ResponseEntity.status(HttpStatus.OK)
+            .body(timeService.stop(request));
     }
     
 }
