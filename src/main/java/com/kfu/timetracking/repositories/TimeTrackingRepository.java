@@ -1,5 +1,6 @@
 package com.kfu.timetracking.repositories;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -14,4 +15,6 @@ public interface TimeTrackingRepository extends JpaRepository<TimeEntry, Long> {
     List<TimeEntry> findByStudent(Student student);
 
     Optional<TimeEntry> findByStudentAndEndIsNull(Student student);
+
+    List<TimeEntry> findByStudentAndStartBetween(Student student, LocalDateTime weekStart, LocalDateTime weekEnd);
 }

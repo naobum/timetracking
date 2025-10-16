@@ -1,6 +1,8 @@
 package com.kfu.timetracking.services;
 
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
 
@@ -10,6 +12,8 @@ import com.kfu.timetracking.repositories.StudentRepository;
 import com.kfu.timetracking.repositories.TimeTrackingRepository;
 import com.kfu.timetracking.requests.timeTrack.StartTimeTrackRequest;
 import com.kfu.timetracking.requests.timeTrack.StopTimeTrackRequest;
+import com.kfu.timetracking.responses.time.TimeEntryDto;
+import com.kfu.timetracking.responses.time.TimeEntryMappings;
 import com.kfu.timetracking.responses.time.TimeStartedResponse;
 import com.kfu.timetracking.responses.time.TimeStoppedResponse;
 
@@ -20,16 +24,16 @@ import lombok.RequiredArgsConstructor;
 @Service
 @RequiredArgsConstructor
 public class TimeService {
-    private final TimeTrackingRepository timeEntiesRepo;
+    private final TimeTrackingRepository timeEntryRepository;
     private final StudentRepository studentRepo;
+    private final TimeEntryMappings timeEntryMapper;
 
     @Transactional
     public TimeStartedResponse start(StartTimeTrackRequest request){
         Student student = studentRepo.findById(request.getStudentId())
             .orElseThrow(() -> new EntityNotFoundException("Студент с ID " + request.getStudentId() + " не найден"));
 
-        // Проверка: если есть активный трекинг, не создаём новый
-        if (timeEntiesRepo.findByStudentAndEndIsNull(student).isPresent()) {
+        if (timeEntryRepository.findByStudentAndEndIsNull(student).isPresent()) {
             throw new IllegalStateException("У студента уже есть активный трекинг");
         }
 
@@ -40,7 +44,7 @@ public class TimeService {
         timeEntry.setDescription(request.getDescription());
         timeEntry.setBillable(true);
 
-        timeEntiesRepo.save(timeEntry);
+        timeEntryRepository.save(timeEntry);
 
         return new TimeStartedResponse(
             timeEntry.getStudent().getId(),
@@ -54,12 +58,26 @@ public class TimeService {
         Student student = studentRepo.findById(request.getStudentId())
             .orElseThrow(() -> new EntityNotFoundException("Студент с ID " + request.getStudentId() + " не найден"));
 
-        TimeEntry timeEntry = timeEntiesRepo.findByStudentAndEndIsNull(student)
+        TimeEntry timeEntry = timeEntryRepository.findByStudentAndEndIsNull(student)
             .orElseThrow(() -> new IllegalStateException("Нет активного трекинга"));
         
         timeEntry.setEnd(LocalDateTime.now());
         timeEntry.setBillable(false);
 
         return new TimeStoppedResponse();
+    }
+
+    public List<TimeEntryDto> getWeeklyStats(Long studentId) {
+        LocalDateTime today = LocalDateTime.now();
+        LocalDateTime weekStart = today.with(java.time.DayOfWeek.MONDAY);
+
+        Student student = studentRepo.findById(studentId)
+            .orElseThrow(() -> new EntityNotFoundException("Студент с ID " + studentId + " не найден"));
+
+        List<TimeEntryDto> result;
+        result = timeEntryRepository.findByStudentAndStartBetween(student, weekStart, today)
+            .stream().map(timeEntryMapper::ToTimeEntryDto).collect(Collectors.toList());
+
+        return result;
     }
 }
