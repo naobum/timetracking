@@ -2,7 +2,6 @@ package com.kfu.timetracking.controllers;
 
 import org.springframework.web.bind.annotation.RestController;
 
-import com.kfu.timetracking.models.TimeEntry;
 import com.kfu.timetracking.requests.timeTrack.StartTimeTrackRequest;
 import com.kfu.timetracking.requests.timeTrack.StopTimeTrackRequest;
 import com.kfu.timetracking.responses.time.TimeEntryDto;

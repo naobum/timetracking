@@ -9,7 +9,7 @@ import org.springframework.stereotype.Service;
 import com.kfu.timetracking.models.Student;
 import com.kfu.timetracking.models.TimeEntry;
 import com.kfu.timetracking.repositories.StudentRepository;
-import com.kfu.timetracking.repositories.TimeTrackingRepository;
+import com.kfu.timetracking.repositories.TimeEntryRepository;
 import com.kfu.timetracking.requests.timeTrack.StartTimeTrackRequest;
 import com.kfu.timetracking.requests.timeTrack.StopTimeTrackRequest;
 import com.kfu.timetracking.responses.time.TimeEntryDto;
@@ -24,7 +24,7 @@ import lombok.RequiredArgsConstructor;
 @Service
 @RequiredArgsConstructor
 public class TimeService {
-    private final TimeTrackingRepository timeEntryRepository;
+    private final TimeEntryRepository timeEntryRepository;
     private final StudentRepository studentRepo;
     private final TimeEntryMappings timeEntryMapper;
 

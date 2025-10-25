@@ -11,10 +11,12 @@ import com.kfu.timetracking.models.Student;
 import com.kfu.timetracking.models.TimeEntry;
 
 @Repository
-public interface TimeTrackingRepository extends JpaRepository<TimeEntry, Long> {
+public interface TimeEntryRepository extends JpaRepository<TimeEntry, Long> {
     List<TimeEntry> findByStudent(Student student);
 
     Optional<TimeEntry> findByStudentAndEndIsNull(Student student);
 
     List<TimeEntry> findByStudentAndStartBetween(Student student, LocalDateTime weekStart, LocalDateTime weekEnd);
+
+    List<TimeEntry> findByDescriptionContainingIgnoreCase(String subject);
 }
