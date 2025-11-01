@@ -9,6 +9,9 @@ import com.kfu.timetracking.responses.time.TimeStartedResponse;
 import com.kfu.timetracking.responses.time.TimeStoppedResponse;
 import com.kfu.timetracking.services.TimeService;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
@@ -23,6 +26,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 
 @RestController
 @RequestMapping("/api/time")
+@Tag(name = "TimeEntries", description = "Трекинг времени")
 public class TimeController {
     private final TimeService timeService;
 
@@ -31,6 +35,7 @@ public class TimeController {
     }
 
     @PostMapping("/start")
+    @Operation(summary = "Старт трекинга", description = "Возвращает информацию о трекинге")
     public ResponseEntity<TimeStartedResponse> start(@RequestBody StartTimeTrackRequest request) {
         
         return ResponseEntity.status(HttpStatus.CREATED)
@@ -38,6 +43,7 @@ public class TimeController {
     }
     
     @PostMapping("/stop")
+    @Operation(summary = "Конец трекинга", description = "Возвращает информацию о трекинге")
     public ResponseEntity<TimeStoppedResponse> stop(@RequestBody StopTimeTrackRequest request) {
         
         return ResponseEntity.status(HttpStatus.OK)
@@ -45,9 +51,10 @@ public class TimeController {
     }
 
     @GetMapping("/weekly")
+    @Operation(summary = "Получение недельной статистики", 
+            description = "Возвращает информацию о всех трекингах за последнюю неделю")
     public ResponseEntity<List<TimeEntryDto>> getWeeklyReport(@RequestParam Long studentId) {
         List<TimeEntryDto> entries = timeService.getWeeklyStats(studentId);
         return ResponseEntity.ok(entries);
     }
-    
 }

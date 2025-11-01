@@ -15,6 +15,8 @@ import com.kfu.timetracking.requests.students.AddStudentRequest;
 import com.kfu.timetracking.responses.students.StudentDto;
 import com.kfu.timetracking.services.StudentService;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.RequestPart;
 
@@ -22,11 +24,13 @@ import org.springframework.web.bind.annotation.RequestPart;
 
 @RestController
 @RequestMapping("/api/students")
+@Tag(name = "Students", description = "Управление студентами")
 @RequiredArgsConstructor
 public class StudentsController {
     private final StudentService studentService;
 
     @PostMapping
+    @Operation(summary = "Добавление студента в БД", description = "Возвращает информацию о добавленном студенте")
     public ResponseEntity<Student> addStudent(@RequestBody AddStudentRequest param) {
         Student addingStudent = new Student();
         addingStudent.setGroupName(param.getGroupName());
@@ -38,6 +42,7 @@ public class StudentsController {
     }
 
     @GetMapping("/{studentId}")
+    @Operation(summary = "Получить студента по ID", description = "Возвращает информацию о студенте")
     public ResponseEntity<StudentDto> getStudent(@PathVariable Long studentId) {
         var student = studentService.getStudentById(studentId);
 
@@ -49,6 +54,7 @@ public class StudentsController {
     }
 
     @DeleteMapping("/{studentId}")
+    @Operation(summary = "Удалить студента из БД по ID", description = "Возвращает NoContent")
         public ResponseEntity<Void> deleteStudent(@RequestPart Long studentId) {
         studentService.deleteStudent(studentId);
 
