@@ -5,6 +5,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
 import com.kfu.timetracking.models.TimeEntry;
@@ -28,6 +29,7 @@ public class PredictionService {
             "программирование", new MockSubjectInfo(80.0, LocalDateTime.now().plusDays(3))
     );
 
+    @Cacheable("time-entries")
     public DeadlinePredictionDTO getPredictionForSubject(String subject) {
         
         MockSubjectInfo metadata = subjectMetadata.getOrDefault(

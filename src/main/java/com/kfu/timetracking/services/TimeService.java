@@ -4,6 +4,8 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
 import com.kfu.timetracking.models.Student;
@@ -29,6 +31,7 @@ public class TimeService {
     private final TimeEntryMappings timeEntryMapper;
 
     @Transactional
+    @CacheEvict(value = "time-entries", key = "#id")
     public TimeStartedResponse start(StartTimeTrackRequest request){
         Student student = studentRepo.findById(request.getStudentId())
             .orElseThrow(() -> new EntityNotFoundException("Студент с ID " + request.getStudentId() + " не найден"));
@@ -54,6 +57,7 @@ public class TimeService {
     }
 
     @Transactional
+    @CacheEvict(value = "time-entries", key = "#id")
     public TimeStoppedResponse stop(StopTimeTrackRequest request){
         Student student = studentRepo.findById(request.getStudentId())
             .orElseThrow(() -> new EntityNotFoundException("Студент с ID " + request.getStudentId() + " не найден"));
@@ -67,6 +71,7 @@ public class TimeService {
         return new TimeStoppedResponse();
     }
 
+    @Cacheable("time-entries")
     public List<TimeEntryDto> getWeeklyStats(Long studentId) {
         LocalDateTime today = LocalDateTime.now();
         LocalDateTime weekStart = today.with(java.time.DayOfWeek.MONDAY);

@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.kfu.timetracking.models.Student;
 import com.kfu.timetracking.requests.students.AddStudentRequest;
+import com.kfu.timetracking.responses.students.StudentDto;
 import com.kfu.timetracking.services.StudentService;
 
 import lombok.RequiredArgsConstructor;
@@ -37,10 +38,10 @@ public class StudentsController {
     }
 
     @GetMapping("/{studentId}")
-    public ResponseEntity<Student> getStudent(@PathVariable Long studentId) {
+    public ResponseEntity<StudentDto> getStudent(@PathVariable Long studentId) {
         var student = studentService.getStudentById(studentId);
 
-        if (student == null){
+        if (student.isEmpty()){
             return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
         }
 
