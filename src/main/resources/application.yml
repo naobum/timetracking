@@ -12,7 +12,9 @@ spring:
         show-sql: true
         properties:
             hibernate:
-            dialect: org.hibernate.dialect.PostgreSQLDialect
+                dialect: org.hibernate.dialect.PostgreSQLDialect
+                
 jwt:
     secret: your-secret-key-here-at-least-256-bits-long-for-HS256
-    expiration: 86400000
+    access-expiration: 900000      # 15 минут
+    refresh-expiration: 604800000  # 7 дней

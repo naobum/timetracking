@@ -1,6 +1,7 @@
 package com.kfu.timetracking.controllers;
 
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -16,6 +17,7 @@ import lombok.RequiredArgsConstructor;
 @RestController
 @RequestMapping("/api/predictions")
 @Tag(name = "Predictions", description = "Получение прогноза по дедлайнам")
+ @PreAuthorize("hasAuthority('PREDICTIONS:READ')")
 @RequiredArgsConstructor
 public class PredictionsController {
     private final PredictionService predictionService;

@@ -1,6 +1,7 @@
 package com.kfu.timetracking.requests.auth;
 
-import com.kfu.timetracking.models.Role;
+import com.kfu.timetracking.requests.auth.enums.RoleEnum;
+
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
@@ -14,7 +15,7 @@ public class RegisterRequest {
     private String password;
     
     @NotNull
-    private Role role;
+    private RoleEnum role;
     
     private Long studentId;
 }

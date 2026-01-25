@@ -1,5 +1,8 @@
 package com.kfu.timetracking.security;
 
+import com.kfu.timetracking.models.Token;
+import com.kfu.timetracking.models.TokenType;
+import com.kfu.timetracking.repositories.TokenRepository;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.Cookie;
@@ -24,6 +27,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     
     private final JwtUtil jwtUtil;
     private final UserDetailsService userDetailsService;
+    private final TokenRepository tokenRepository;
 
     @Override
     protected void doFilterInternal(
@@ -31,7 +35,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             HttpServletResponse response,
             FilterChain filterChain) throws ServletException, IOException {
         
-        Optional<String> jwtToken = extractJwtFromCookie(request);
+        Optional<String> jwtToken = extractJwtFromCookie(request, JwtUtil.ACCESS_COOKIE_NAME);
         
         if (jwtToken.isPresent()) {
             String token = jwtToken.get();
@@ -40,7 +44,13 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
                 UserDetails userDetails = userDetailsService.loadUserByUsername(username);
                 
-                if (jwtUtil.isTokenValid(token, username)) {
+                // Проверяем токен в БД
+                Optional<Token> tokenEntity = tokenRepository.findByValueAndType(token, TokenType.ACCESS);
+                
+                if (jwtUtil.isTokenValid(token, username) && 
+                    tokenEntity.isPresent() && 
+                    tokenEntity.get().isValid()) {
+                    
                     UsernamePasswordAuthenticationToken authToken = 
                         new UsernamePasswordAuthenticationToken(
                             userDetails,
@@ -58,14 +68,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         filterChain.doFilter(request, response);
     }
 
-    private Optional<String> extractJwtFromCookie(HttpServletRequest request) {
+    private Optional<String> extractJwtFromCookie(HttpServletRequest request, String cookieName) {
         Cookie[] cookies = request.getCookies();
         if (cookies == null) {
             return Optional.empty();
         }
         
         return Arrays.stream(cookies)
-                .filter(cookie -> JwtUtil.COOKIE_NAME.equals(cookie.getName()))
+                .filter(cookie -> cookieName.equals(cookie.getName()))
                 .map(Cookie::getValue)
                 .findFirst();
     }

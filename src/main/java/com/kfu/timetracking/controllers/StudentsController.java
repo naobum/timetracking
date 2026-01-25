@@ -2,6 +2,7 @@ package com.kfu.timetracking.controllers;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -30,6 +31,7 @@ public class StudentsController {
     private final StudentService studentService;
 
     @PostMapping
+    @PreAuthorize("hasAuthority('STUDENTS:WRITE')")
     @Operation(summary = "Добавление студента в БД", description = "Возвращает информацию о добавленном студенте")
     public ResponseEntity<Student> addStudent(@RequestBody AddStudentRequest param) {
         Student addingStudent = new Student();
@@ -42,6 +44,7 @@ public class StudentsController {
     }
 
     @GetMapping("/{studentId}")
+    @PreAuthorize("hasAuthority('STUDENTS:READ')")
     @Operation(summary = "Получить студента по ID", description = "Возвращает информацию о студенте")
     public ResponseEntity<StudentDto> getStudent(@PathVariable Long studentId) {
         var student = studentService.getStudentById(studentId);
@@ -54,6 +57,7 @@ public class StudentsController {
     }
 
     @DeleteMapping("/{studentId}")
+    @PreAuthorize("hasAuthority('STUDENTS:WRITE')")
     @Operation(summary = "Удалить студента из БД по ID", description = "Возвращает NoContent")
         public ResponseEntity<Void> deleteStudent(@RequestPart Long studentId) {
         studentService.deleteStudent(studentId);
