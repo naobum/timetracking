@@ -32,7 +32,7 @@ public class StudentService {
     }
 
     @Transactional
-    @Cacheable("students")
+    @CacheEvict(value = "students", allEntries = true)
     public void deleteStudent(Long studentId) {
         Student deletingStudent = studentRepo.getReferenceById(studentId);
         studentRepo.delete(deletingStudent);
