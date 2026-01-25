@@ -14,8 +14,10 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Function;
+import lombok.extern.slf4j.Slf4j;
 
 @Component
+@Slf4j
 public class JwtUtil {
     
     @Value("${jwt.secret}")
@@ -35,10 +37,12 @@ public class JwtUtil {
     }
 
     public String generateAccessToken(String username, String role) {
+        log.debug("Генерирование access токена для пользователя: {}", username);
         return generateToken(username, role, TokenType.ACCESS, accessExpiration);
     }
     
     public String generateRefreshToken(String username, String role) {
+        log.debug("Генерирование refresh токена для пользователя: {}", username);
         return generateToken(username, role, TokenType.REFRESH, refreshExpiration);
     }
 
@@ -83,8 +87,13 @@ public class JwtUtil {
     }
 
     public boolean isTokenValid(String token, String username) {
+        log.debug("Проверка валидности токена для пользователя: {}", username);
         final String extractedUsername = extractUsername(token);
-        return (extractedUsername.equals(username) && !isTokenExpired(token));
+        boolean isValid = (extractedUsername.equals(username) && !isTokenExpired(token));
+        if (!isValid) {
+            log.warn("Токен невалиден для пользователя: {}", username);
+        }
+        return isValid;
     }
 
     private boolean isTokenExpired(String token) {

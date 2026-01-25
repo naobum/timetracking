@@ -6,6 +6,7 @@ import com.kfu.timetracking.responses.auth.TokenResponse;
 import com.kfu.timetracking.security.JwtUtil;
 import com.kfu.timetracking.services.AuthService;
 import io.swagger.v3.oas.annotations.Operation;
+import lombok.extern.slf4j.Slf4j;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -35,6 +36,7 @@ import java.util.Arrays;
                   "Включает операции регистрации, входа в систему, обновления токенов доступа и выхода."
 )
 @RequiredArgsConstructor
+@Slf4j
 public class AuthController {
     
     private final AuthService authService;
@@ -66,8 +68,15 @@ public class AuthController {
         )
     })
     public ResponseEntity<String> register(@RequestBody @Valid RegisterRequest request) {
-        authService.register(request);
-        return ResponseEntity.status(HttpStatus.CREATED).body("Пользователь успешно зарегистрирован");
+        log.debug("POST /api/auth/register - запрос регистрации от {}", request.getUsername());
+        try {
+            authService.register(request);
+            log.info("Успешная регистрация пользователя: {}", request.getUsername());
+            return ResponseEntity.status(HttpStatus.CREATED).body("Пользователь успешно зарегистрирован");
+        } catch (Exception e) {
+            log.error("Ошибка при регистрации пользователя: {}", request.getUsername(), e);
+            throw e;
+        }
     }
 
     /**
@@ -102,16 +111,23 @@ public class AuthController {
     public ResponseEntity<String> login(
             @RequestBody @Valid LoginRequest request,
             HttpServletResponse response) {
-        TokenResponse tokenResponse = authService.login(request);
-        
-        if (tokenResponse.getAccessCookie() != null) {
-            response.addCookie(tokenResponse.getAccessCookie());
+        log.debug("POST /api/auth/login - запрос входа от {}", request.getUsername());
+        try {
+            TokenResponse tokenResponse = authService.login(request);
+            
+            if (tokenResponse.getAccessCookie() != null) {
+                response.addCookie(tokenResponse.getAccessCookie());
+            }
+            if (tokenResponse.getRefreshCookie() != null) {
+                response.addCookie(tokenResponse.getRefreshCookie());
+            }
+            
+            log.info("Успешный вход пользователя: {}", request.getUsername());
+            return ResponseEntity.status(HttpStatus.OK).body("Успешный вход");
+        } catch (Exception e) {
+            log.warn("Ошибка при входе пользователя: {}", request.getUsername());
+            throw e;
         }
-        if (tokenResponse.getRefreshCookie() != null) {
-            response.addCookie(tokenResponse.getRefreshCookie());
-        }
-        
-        return ResponseEntity.status(HttpStatus.OK).body("Успешный вход");
     }
     
     /**
@@ -146,19 +162,27 @@ public class AuthController {
     public ResponseEntity<String> refresh(
             HttpServletRequest request,
             HttpServletResponse response) {
+        log.debug("POST /api/auth/refresh - запрос обновления токена");
         String refreshToken = extractRefreshTokenFromCookie(request);
         
         if (refreshToken == null) {
+            log.warn("Refresh токен не найден в cookies");
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Refresh токен не найден");
         }
         
-        TokenResponse tokenResponse = authService.refreshToken(refreshToken);
-        
-        if (tokenResponse.getAccessCookie() != null) {
-            response.addCookie(tokenResponse.getAccessCookie());
+        try {
+            TokenResponse tokenResponse = authService.refreshToken(refreshToken);
+            
+            if (tokenResponse.getAccessCookie() != null) {
+                response.addCookie(tokenResponse.getAccessCookie());
+            }
+            
+            log.info("Токен успешно обновлен");
+            return ResponseEntity.status(HttpStatus.OK).body("Токен обновлен");
+        } catch (Exception e) {
+            log.warn("Ошибка при обновлении токена: {}", e.getMessage());
+            throw e;
         }
-        
-        return ResponseEntity.status(HttpStatus.OK).body("Токен обновлен");
     }
 
     /**
@@ -188,14 +212,19 @@ public class AuthController {
     public ResponseEntity<Void> logout(
             Authentication authentication,
             HttpServletResponse response) {
+        log.debug("POST /api/auth/logout - запрос выхода");
         
         if (authentication != null) {
+            log.info("Выход пользователя: {}", authentication.getName());
             authService.logout(authentication.getName());
+        } else {
+            log.warn("Попытка выхода без аутентификации");
         }
         
         response.addCookie(new JwtUtil().getDeleteCookie(JwtUtil.ACCESS_COOKIE_NAME));
         response.addCookie(new JwtUtil().getDeleteCookie(JwtUtil.REFRESH_COOKIE_NAME));
         
+        log.info("Пользователь успешно вышел из системы");
         return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
     }
     

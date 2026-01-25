@@ -20,9 +20,11 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Optional;
+import lombok.extern.slf4j.Slf4j;
 
 @Component
 @RequiredArgsConstructor
+@Slf4j
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
     
     private final JwtUtil jwtUtil;
@@ -35,11 +37,13 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             HttpServletResponse response,
             FilterChain filterChain) throws ServletException, IOException {
         
+        log.debug("Обработка JWT аутентификации для URL: {}", request.getRequestURI());
         Optional<String> jwtToken = extractJwtFromCookie(request, JwtUtil.ACCESS_COOKIE_NAME);
         
         if (jwtToken.isPresent()) {
             String token = jwtToken.get();
             String username = jwtUtil.extractUsername(token);
+            log.debug("Найден токен для пользователя: {}", username);
             
             if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
                 UserDetails userDetails = userDetailsService.loadUserByUsername(username);
@@ -51,6 +55,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     tokenEntity.isPresent() && 
                     tokenEntity.get().isValid()) {
                     
+                    log.info("JWT токен валиден и установлена аутентификация для пользователя: {}", username);
                     UsernamePasswordAuthenticationToken authToken = 
                         new UsernamePasswordAuthenticationToken(
                             userDetails,
@@ -61,8 +66,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                         new WebAuthenticationDetailsSource().buildDetails(request)
                     );
                     SecurityContextHolder.getContext().setAuthentication(authToken);
+                } else {
+                    log.warn("JWT токен невалиден для пользователя: {}", username);
                 }
             }
+        } else {
+            log.debug("JWT токен не найден в cookies для URL: {}", request.getRequestURI());
         }
         
         filterChain.doFilter(request, response);

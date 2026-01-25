@@ -14,6 +14,7 @@ import com.kfu.timetracking.security.JwtUtil;
 import jakarta.servlet.http.Cookie;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -25,6 +26,7 @@ import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class AuthService {
     
     private final UserRepository userRepository;
@@ -36,7 +38,9 @@ public class AuthService {
 
     @Transactional
     public void register(RegisterRequest request) {
+        log.info("Попытка регистрации пользователя: {}", request.getUsername());
         if (userRepository.existsByUsername(request.getUsername())) {
+            log.warn("Попытка регистрации существующего пользователя: {}", request.getUsername());
             throw new IllegalArgumentException("Пользователь уже существует");
         }
 
@@ -52,16 +56,23 @@ public class AuthService {
         user.setRoles(roles);
         
         userRepository.save(user);
+        log.info("Пользователь успешно зарегистрирован: {} с ролью: {}", request.getUsername(), request.getRole());
     }
 
     @Transactional
     public TokenResponse login(LoginRequest request) {
-        authenticationManager.authenticate(
-            new UsernamePasswordAuthenticationToken(
-                request.getUsername(),
-                request.getPassword()
-            )
-        );
+        log.info("Попытка входа пользователя: {}", request.getUsername());
+        try {
+            authenticationManager.authenticate(
+                new UsernamePasswordAuthenticationToken(
+                    request.getUsername(),
+                    request.getPassword()
+                )
+            );
+        } catch (Exception e) {
+            log.warn("Ошибка аутентификации для пользователя: {}", request.getUsername());
+            throw e;
+        }
 
         User user = userRepository.findByUsername(request.getUsername())
                 .orElseThrow(() -> new IllegalArgumentException("Пользователь не найден"));
@@ -83,15 +94,18 @@ public class AuthService {
         Cookie accessCookie = jwtUtil.generateAccessCookie(user.getUsername(), roleName);
         Cookie refreshCookie = jwtUtil.generateRefreshCookie(user.getUsername(), roleName);
         
+        log.info("Пользователь успешно вошел: {}", request.getUsername());
         return new TokenResponse(accessToken, refreshToken, accessCookie, refreshCookie);
     }
     
     @Transactional
     public TokenResponse refreshToken(String refreshTokenValue) {
+        log.debug("Попытка обновления токена");
         Token refreshToken = tokenRepository.findByValueAndType(refreshTokenValue, TokenType.REFRESH)
                 .orElseThrow(() -> new IllegalArgumentException("Refresh токен не найден"));
         
         if (!refreshToken.isValid()) {
+            log.warn("Попытка использования недействительного refresh токена");
             throw new IllegalArgumentException("Refresh токен недействителен");
         }
         
@@ -105,6 +119,7 @@ public class AuthService {
         String newAccessToken = jwtUtil.generateAccessToken(user.getUsername(), roleName);
         saveToken(user, newAccessToken, TokenType.ACCESS);
         
+        log.info("Токен успешно обновлен для пользователя: {}", user.getUsername());
         Cookie accessCookie = jwtUtil.generateAccessCookie(user.getUsername(), roleName);
         
         return new TokenResponse(newAccessToken, refreshTokenValue, accessCookie, null);
@@ -112,11 +127,13 @@ public class AuthService {
 
     @Transactional
     public void logout(String username) {
+        log.info("Выход пользователя: {}", username);
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new IllegalArgumentException("Пользователь не найден"));
         
         tokenRepository.disableAllUserTokensByType(user, TokenType.ACCESS);
         tokenRepository.disableAllUserTokensByType(user, TokenType.REFRESH);
+        log.info("Пользователь успешно вышел: {}", username);
     }
     
     private void saveToken(User user, String tokenValue, TokenType type) {
