@@ -2,19 +2,25 @@ package com.kfu.timetracking.responses.time;
 
 import java.time.LocalDateTime;
 
-import org.springframework.web.bind.annotation.ResponseBody;
-
 import com.kfu.timetracking.models.TaskType;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
 
-@ResponseBody
 @Data
 @AllArgsConstructor
-public class TimeStartedResponse {
-    private Long studentId;
-    private LocalDateTime start;
-    private TaskType taskType;
+public class TimeEntryDto {
+    public TimeEntryDto() {
+        //TODO Auto-generated constructor stub
+    }
+
+    private Long id;
+
+    private TaskType type;
+
     private String description;
+
+    private LocalDateTime start;
+
+    private LocalDateTime end;
 }

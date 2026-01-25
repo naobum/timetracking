@@ -1,0 +1,130 @@
+package com.kfu.timetracking.services;
+
+import com.kfu.timetracking.models.Role;
+import com.kfu.timetracking.models.Token;
+import com.kfu.timetracking.models.TokenType;
+import com.kfu.timetracking.models.User;
+import com.kfu.timetracking.repositories.RoleRepository;
+import com.kfu.timetracking.repositories.TokenRepository;
+import com.kfu.timetracking.repositories.UserRepository;
+import com.kfu.timetracking.requests.auth.LoginRequest;
+import com.kfu.timetracking.requests.auth.RegisterRequest;
+import com.kfu.timetracking.responses.auth.TokenResponse;
+import com.kfu.timetracking.security.JwtUtil;
+import jakarta.servlet.http.Cookie;
+import jakarta.transaction.Transactional;
+import lombok.RequiredArgsConstructor;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+
+import java.time.LocalDateTime;
+import java.util.HashSet;
+import java.util.Set;
+
+@Service
+@RequiredArgsConstructor
+public class AuthService {
+    
+    private final UserRepository userRepository;
+    private final TokenRepository tokenRepository;
+    private final RoleRepository roleRepository;
+    private final PasswordEncoder passwordEncoder;
+    private final JwtUtil jwtUtil;
+    private final AuthenticationManager authenticationManager;
+
+    @Transactional
+    public void register(RegisterRequest request) {
+        if (userRepository.existsByUsername(request.getUsername())) {
+            throw new IllegalArgumentException("Пользователь уже существует");
+        }
+
+        User user = new User();
+        user.setUsername(request.getUsername());
+        user.setPassword(passwordEncoder.encode(request.getPassword()));
+        
+        Role role = roleRepository.findByName(request.getRole().name())
+                .orElseThrow(() -> new IllegalArgumentException("Роль не найдена"));
+        
+        Set<Role> roles = new HashSet<>();
+        roles.add(role);
+        user.setRoles(roles);
+        
+        userRepository.save(user);
+    }
+
+    @Transactional
+    public TokenResponse login(LoginRequest request) {
+        authenticationManager.authenticate(
+            new UsernamePasswordAuthenticationToken(
+                request.getUsername(),
+                request.getPassword()
+            )
+        );
+
+        User user = userRepository.findByUsername(request.getUsername())
+                .orElseThrow(() -> new IllegalArgumentException("Пользователь не найден"));
+
+        // Деактивируем старые токены
+        tokenRepository.disableAllUserTokensByType(user, TokenType.ACCESS);
+        tokenRepository.disableAllUserTokensByType(user, TokenType.REFRESH);
+        
+        String roleName = user.getRoles().iterator().next().getName();
+        
+        // Генерируем новые токены
+        String accessToken = jwtUtil.generateAccessToken(user.getUsername(), roleName);
+        String refreshToken = jwtUtil.generateRefreshToken(user.getUsername(), roleName);
+        
+        // Сохраняем токены в БД
+        saveToken(user, accessToken, TokenType.ACCESS);
+        saveToken(user, refreshToken, TokenType.REFRESH);
+
+        Cookie accessCookie = jwtUtil.generateAccessCookie(user.getUsername(), roleName);
+        Cookie refreshCookie = jwtUtil.generateRefreshCookie(user.getUsername(), roleName);
+        
+        return new TokenResponse(accessToken, refreshToken, accessCookie, refreshCookie);
+    }
+    
+    @Transactional
+    public TokenResponse refreshToken(String refreshTokenValue) {
+        Token refreshToken = tokenRepository.findByValueAndType(refreshTokenValue, TokenType.REFRESH)
+                .orElseThrow(() -> new IllegalArgumentException("Refresh токен не найден"));
+        
+        if (!refreshToken.isValid()) {
+            throw new IllegalArgumentException("Refresh токен недействителен");
+        }
+        
+        User user = refreshToken.getUser();
+        String roleName = user.getRoles().iterator().next().getName();
+        
+        // Деактивируем старые access токены
+        tokenRepository.disableAllUserTokensByType(user, TokenType.ACCESS);
+        
+        // Генерируем новый access токен
+        String newAccessToken = jwtUtil.generateAccessToken(user.getUsername(), roleName);
+        saveToken(user, newAccessToken, TokenType.ACCESS);
+        
+        Cookie accessCookie = jwtUtil.generateAccessCookie(user.getUsername(), roleName);
+        
+        return new TokenResponse(newAccessToken, refreshTokenValue, accessCookie, null);
+    }
+
+    @Transactional
+    public void logout(String username) {
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new IllegalArgumentException("Пользователь не найден"));
+        
+        tokenRepository.disableAllUserTokensByType(user, TokenType.ACCESS);
+        tokenRepository.disableAllUserTokensByType(user, TokenType.REFRESH);
+    }
+    
+    private void saveToken(User user, String tokenValue, TokenType type) {
+        LocalDateTime expiryDate = LocalDateTime.now().plusSeconds(
+            type == TokenType.ACCESS ? 900 : 604800 // 15 мин или 7 дней
+        );
+        
+        Token token = new Token(type, tokenValue, expiryDate, false, user);
+        tokenRepository.save(token);
+    }
+}
