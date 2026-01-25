@@ -16,6 +16,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
@@ -51,7 +52,7 @@ public class AuthController {
     )
     @ApiResponses({
         @ApiResponse(
-            responseCode = "200",
+            responseCode = "201",
             description = "Пользователь успешно зарегистрирован",
             content = @Content(mediaType = "application/json", schema = @Schema(example = "Пользователь успешно зарегистрирован"))
         ),
@@ -66,7 +67,7 @@ public class AuthController {
     })
     public ResponseEntity<String> register(@RequestBody @Valid RegisterRequest request) {
         authService.register(request);
-        return ResponseEntity.ok("Пользователь успешно зарегистрирован");
+        return ResponseEntity.status(HttpStatus.CREATED).body("Пользователь успешно зарегистрирован");
     }
 
     /**
@@ -110,7 +111,7 @@ public class AuthController {
             response.addCookie(tokenResponse.getRefreshCookie());
         }
         
-        return ResponseEntity.ok("Успешный вход");
+        return ResponseEntity.status(HttpStatus.OK).body("Успешный вход");
     }
     
     /**
@@ -148,7 +149,7 @@ public class AuthController {
         String refreshToken = extractRefreshTokenFromCookie(request);
         
         if (refreshToken == null) {
-            return ResponseEntity.badRequest().body("Refresh токен не найден");
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Refresh токен не найден");
         }
         
         TokenResponse tokenResponse = authService.refreshToken(refreshToken);
@@ -157,7 +158,7 @@ public class AuthController {
             response.addCookie(tokenResponse.getAccessCookie());
         }
         
-        return ResponseEntity.ok("Токен обновлен");
+        return ResponseEntity.status(HttpStatus.OK).body("Токен обновлен");
     }
 
     /**
@@ -176,16 +177,15 @@ public class AuthController {
     )
     @ApiResponses({
         @ApiResponse(
-            responseCode = "200",
-            description = "Пользователь успешно вышел из системы",
-            content = @Content(mediaType = "application/json", schema = @Schema(example = "Успешный выход"))
+            responseCode = "204",
+            description = "Пользователь успешно вышел из системы"
         ),
         @ApiResponse(
             responseCode = "401",
             description = "Пользователь не аутентифицирован"
         )
     })
-    public ResponseEntity<String> logout(
+    public ResponseEntity<Void> logout(
             Authentication authentication,
             HttpServletResponse response) {
         
@@ -196,7 +196,7 @@ public class AuthController {
         response.addCookie(new JwtUtil().getDeleteCookie(JwtUtil.ACCESS_COOKIE_NAME));
         response.addCookie(new JwtUtil().getDeleteCookie(JwtUtil.REFRESH_COOKIE_NAME));
         
-        return ResponseEntity.ok("Успешный выход");
+        return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
     }
     
     private String extractRefreshTokenFromCookie(HttpServletRequest request) {
