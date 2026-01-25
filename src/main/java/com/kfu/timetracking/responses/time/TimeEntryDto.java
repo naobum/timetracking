@@ -10,6 +10,10 @@ import lombok.Data;
 @Data
 @AllArgsConstructor
 public class TimeEntryDto {
+    public TimeEntryDto() {
+        //TODO Auto-generated constructor stub
+    }
+
     private Long id;
 
     private TaskType type;

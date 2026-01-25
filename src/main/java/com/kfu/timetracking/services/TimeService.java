@@ -31,7 +31,7 @@ public class TimeService {
     private final TimeEntryMappings timeEntryMapper;
 
     @Transactional
-    @CacheEvict(value = "time-entries", key = "#id")
+    @CacheEvict(value = "time-entries", allEntries = true)
     public TimeStartedResponse start(StartTimeTrackRequest request){
         Student student = studentRepo.findById(request.getStudentId())
             .orElseThrow(() -> new EntityNotFoundException("Студент с ID " + request.getStudentId() + " не найден"));
@@ -57,7 +57,7 @@ public class TimeService {
     }
 
     @Transactional
-    @CacheEvict(value = "time-entries", key = "#id")
+    @CacheEvict(value = "time-entries", allEntries = true)
     public TimeStoppedResponse stop(StopTimeTrackRequest request){
         Student student = studentRepo.findById(request.getStudentId())
             .orElseThrow(() -> new EntityNotFoundException("Студент с ID " + request.getStudentId() + " не найден"));
@@ -71,7 +71,7 @@ public class TimeService {
         return new TimeStoppedResponse();
     }
 
-    @Cacheable("time-entries")
+    @Cacheable(value = "time-entries", key = "#studentId")
     public List<TimeEntryDto> getWeeklyStats(Long studentId) {
         LocalDateTime today = LocalDateTime.now();
         LocalDateTime weekStart = today.with(java.time.DayOfWeek.MONDAY);

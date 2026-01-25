@@ -13,5 +13,5 @@ public class DeadlinePredictionDTO {
     private String subject; 
     private LocalDateTime deadline; 
     private Double hoursLeft;
-    private RiskLevel risk;
+    private RiskLevel riskLevel;
 }
