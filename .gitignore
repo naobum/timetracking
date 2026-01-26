@@ -36,3 +36,6 @@ build/
 logs/
 LOGGING*.*
 START_HERE*.*
+
+### Docker documentation ###
+DOCKER_DEPLOYMENT.md
