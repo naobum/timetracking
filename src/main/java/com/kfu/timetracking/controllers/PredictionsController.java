@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.kfu.timetracking.models.TaskType;
 import com.kfu.timetracking.responses.predictions.DeadlinePredictionDTO;
 import com.kfu.timetracking.services.PredictionService;
 
@@ -84,9 +85,9 @@ public class PredictionsController {
                 example = "ИВТ",
                 required = true
             )
-            @RequestParam String subject) {
-                
-        DeadlinePredictionDTO prediction = predictionService.getPredictionForSubject(subject);
+            @RequestParam String subject, @RequestParam TaskType taskType) {
+
+        DeadlinePredictionDTO prediction = predictionService.getPredictionForSubject(subject, taskType);
         return ResponseEntity.status(HttpStatus.OK).body(prediction);
     }
 }
