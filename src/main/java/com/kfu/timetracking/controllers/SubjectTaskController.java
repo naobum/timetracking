@@ -27,6 +27,7 @@ import lombok.extern.slf4j.Slf4j;
 @Tag(name = "Subject Tasks", description = "Управление задачами по предметам")
 public class SubjectTaskController {
     private final SubjectTaskService subjectTaskService;
+    private static final long MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB
 
     @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @Operation(summary = "Загрузить CSV файл с задачами", description = "Загружает CSV файл с данными: task_type,subject,expectedHours", responses = {
@@ -41,6 +42,10 @@ public class SubjectTaskController {
         
         if (!file.getOriginalFilename().endsWith(".csv")) {
             return ResponseEntity.badRequest().body("Файл должен быть в формате CSV");
+        }
+        
+        if (file.getSize() > MAX_FILE_SIZE) {
+            return ResponseEntity.badRequest().body("Размер файла превышает допустимый лимит (5 MB)");
         }
         
         try {
