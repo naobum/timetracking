@@ -22,6 +22,14 @@ import lombok.NoArgsConstructor;
 @Schema(description = "Ответ при успешном завершении отслеживания времени")
 public class TimeStoppedResponse {
     
+    public TimeStoppedResponse(Long id, LocalDateTime start, LocalDateTime end, TaskType type, String description) {
+        this.studentId = id;
+        this.start = start;
+        this.end = end;
+        this.taskType = type;
+        this.description = description;
+    }
+
     @Schema(
         description = "ID студента, для которого остановлен таймер",
         example = "1",

@@ -8,6 +8,7 @@ import com.kfu.timetracking.responses.time.TimeEntryDto;
 import com.kfu.timetracking.responses.time.TimeStartedResponse;
 import com.kfu.timetracking.responses.time.TimeStoppedResponse;
 import com.kfu.timetracking.services.TimeService;
+import com.kfu.timetracking.services.ExcelReportService;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.ArraySchema;
@@ -21,9 +22,12 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
 import java.util.List;
+import java.io.IOException;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.MediaType;
+import org.springframework.http.HttpHeaders;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -43,9 +47,11 @@ import org.springframework.web.bind.annotation.RequestBody;
 )
 public class TimeController {
     private final TimeService timeService;
+    private final ExcelReportService excelReportService;
 
-    public TimeController(TimeService timeService){
+    public TimeController(TimeService timeService, ExcelReportService excelReportService){
         this.timeService = timeService;
+        this.excelReportService = excelReportService;
     }
 
     /**
@@ -171,5 +177,101 @@ public class TimeController {
     public ResponseEntity<List<TimeEntryDto>> getWeeklyReport(@RequestParam Long studentId) {
         List<TimeEntryDto> entries = timeService.getWeeklyStats(studentId);
         return ResponseEntity.ok(entries);
+    }
+
+    /**
+     * Скачивает отчёт о затреканом времени за неделю в формате Excel с графиком.
+     * Требует прав доступа TIME:READ.
+     * 
+     * @param studentId уникальный идентификатор студента
+     * @return Excel файл с отчётом
+     */
+    @GetMapping("/weekly-report/excel")
+    @PreAuthorize("hasAuthority('TIME:READ')")
+    @Operation(
+        summary = "Скачать недельный отчёт в Excel",
+        description = "Генерирует и скачивает Excel отчёт о затреканом времени за последние 7 дней с графиком. " +
+                      "Требует прав доступа TIME:READ."
+    )
+    @ApiResponses({
+        @ApiResponse(
+            responseCode = "200",
+            description = "Отчёт успешно сгенерирован",
+            content = @Content(mediaType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+        ),
+        @ApiResponse(
+            responseCode = "403",
+            description = "Недостаточно прав доступа"
+        ),
+        @ApiResponse(
+            responseCode = "404",
+            description = "Студент не найден"
+        ),
+        @ApiResponse(
+            responseCode = "400",
+            description = "Некорректный ID студента"
+        )
+    })
+    public ResponseEntity<byte[]> downloadWeeklyReport(@RequestParam Long studentId) {
+        try {
+            byte[] excelContent = excelReportService.generateWeeklyReport(studentId);
+            
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.valueOf("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"));
+            headers.setContentDispositionFormData("attachment", "weekly_report_" + studentId + ".xlsx");
+            headers.setContentLength(excelContent.length);
+            
+            return new ResponseEntity<>(excelContent, headers, HttpStatus.OK);
+        } catch (IOException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    /**
+     * Скачивает отчёт о затреканом времени за месяц в формате Excel с графиком.
+     * Требует прав доступа TIME:READ.
+     * 
+     * @param studentId уникальный идентификатор студента
+     * @return Excel файл с отчётом
+     */
+    @GetMapping("/monthly-report/excel")
+    @PreAuthorize("hasAuthority('TIME:READ')")
+    @Operation(
+        summary = "Скачать месячный отчёт в Excel",
+        description = "Генерирует и скачивает Excel отчёт о затреканом времени за текущий месяц с графиком. " +
+                      "Требует прав доступа TIME:READ."
+    )
+    @ApiResponses({
+        @ApiResponse(
+            responseCode = "200",
+            description = "Отчёт успешно сгенерирован",
+            content = @Content(mediaType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+        ),
+        @ApiResponse(
+            responseCode = "403",
+            description = "Недостаточно прав доступа"
+        ),
+        @ApiResponse(
+            responseCode = "404",
+            description = "Студент не найден"
+        ),
+        @ApiResponse(
+            responseCode = "400",
+            description = "Некорректный ID студента"
+        )
+    })
+    public ResponseEntity<byte[]> downloadMonthlyReport(@RequestParam Long studentId) {
+        try {
+            byte[] excelContent = excelReportService.generateMonthlyReport(studentId);
+            
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.valueOf("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"));
+            headers.setContentDispositionFormData("attachment", "monthly_report_" + studentId + ".xlsx");
+            headers.setContentLength(excelContent.length);
+            
+            return new ResponseEntity<>(excelContent, headers, HttpStatus.OK);
+        } catch (IOException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
     }
 }
