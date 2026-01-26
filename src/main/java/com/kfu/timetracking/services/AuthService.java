@@ -11,6 +11,7 @@ import com.kfu.timetracking.requests.auth.LoginRequest;
 import com.kfu.timetracking.requests.auth.RegisterRequest;
 import com.kfu.timetracking.responses.auth.TokenResponse;
 import com.kfu.timetracking.security.JwtUtil;
+import com.kfu.timetracking.telegram.TelegramBotFacade;
 import jakarta.servlet.http.Cookie;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -22,6 +23,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.HashSet;
+import java.util.Optional;
 import java.util.Set;
 
 @Service
@@ -35,6 +37,7 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
     private final AuthenticationManager authenticationManager;
+    private final Optional<TelegramBotFacade> telegramBotFacade;
 
     @Transactional
     public void register(RegisterRequest request) {
@@ -57,6 +60,9 @@ public class AuthService {
         
         userRepository.save(user);
         log.info("Пользователь успешно зарегистрирован: {} с ролью: {}", request.getUsername(), request.getRole());
+        
+        // Логирование в Telegram
+        telegramBotFacade.ifPresent(facade -> facade.logRegistration(request.getUsername()));
     }
 
     @Transactional
@@ -71,6 +77,7 @@ public class AuthService {
             );
         } catch (Exception e) {
             log.warn("Ошибка аутентификации для пользователя: {}", request.getUsername());
+            telegramBotFacade.ifPresent(facade -> facade.logLoginFailure(request.getUsername()));
             throw e;
         }
 
@@ -95,6 +102,10 @@ public class AuthService {
         Cookie refreshCookie = jwtUtil.generateRefreshCookie(user.getUsername(), roleName);
         
         log.info("Пользователь успешно вошел: {}", request.getUsername());
+        
+        // Логирование в Telegram
+        telegramBotFacade.ifPresent(facade -> facade.logLoginSuccess(request.getUsername()));
+        
         return new TokenResponse(accessToken, refreshToken, accessCookie, refreshCookie);
     }
     
@@ -120,6 +131,10 @@ public class AuthService {
         saveToken(user, newAccessToken, TokenType.ACCESS);
         
         log.info("Токен успешно обновлен для пользователя: {}", user.getUsername());
+        
+        // Логирование в Telegram
+        telegramBotFacade.ifPresent(facade -> facade.logTokenRefresh(user.getUsername()));
+        
         Cookie accessCookie = jwtUtil.generateAccessCookie(user.getUsername(), roleName);
         
         return new TokenResponse(newAccessToken, refreshTokenValue, accessCookie, null);
@@ -134,6 +149,9 @@ public class AuthService {
         tokenRepository.disableAllUserTokensByType(user, TokenType.ACCESS);
         tokenRepository.disableAllUserTokensByType(user, TokenType.REFRESH);
         log.info("Пользователь успешно вышел: {}", username);
+        
+        // Логирование в Telegram
+        telegramBotFacade.ifPresent(facade -> facade.logLogout(username));
     }
     
     private void saveToken(User user, String tokenValue, TokenType type) {

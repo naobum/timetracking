@@ -33,3 +33,11 @@ jwt:
     secret: your-secret-key-here-at-least-256-bits-long-for-HS256
     access-expiration: 900000      # 15 минут
     refresh-expiration: 604800000  # 7 дней
+telegram:
+    bot:
+        name: "TimeTrackingBot"
+        token: "token_here"
+        chat-id: "936389974" # чат id для логов
+        enabled: false
+        log-all-requests: true
+        filter-public-endpoints: true
