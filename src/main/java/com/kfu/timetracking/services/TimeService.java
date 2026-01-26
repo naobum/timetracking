@@ -22,9 +22,11 @@ import com.kfu.timetracking.responses.time.TimeStoppedResponse;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class TimeService {
     private final TimeEntryRepository timeEntryRepository;
     private final StudentRepository studentRepo;
@@ -33,10 +35,12 @@ public class TimeService {
     @Transactional
     @CacheEvict(value = "time-entries", allEntries = true)
     public TimeStartedResponse start(StartTimeTrackRequest request){
+        log.info("Попытка начать трекинг времени для студента с ID: {}", request.getStudentId());
         Student student = studentRepo.findById(request.getStudentId())
             .orElseThrow(() -> new EntityNotFoundException("Студент с ID " + request.getStudentId() + " не найден"));
 
         if (timeEntryRepository.findByStudentAndEndIsNull(student).isPresent()) {
+            log.warn("У студента с ID: {} уже есть активный трекинг", request.getStudentId());
             throw new IllegalStateException("У студента уже есть активный трекинг");
         }
 
@@ -48,6 +52,7 @@ public class TimeService {
         timeEntry.setBillable(true);
 
         timeEntryRepository.save(timeEntry);
+        log.info("Трекинг времени начат для студента с ID: {} в {}", request.getStudentId(), timeEntry.getStart());
 
         return new TimeStartedResponse(
             timeEntry.getStudent().getId(),
@@ -59,6 +64,7 @@ public class TimeService {
     @Transactional
     @CacheEvict(value = "time-entries", allEntries = true)
     public TimeStoppedResponse stop(StopTimeTrackRequest request){
+        log.info("Попытка остановить трекинг времени для студента с ID: {}", request.getStudentId());
         Student student = studentRepo.findById(request.getStudentId())
             .orElseThrow(() -> new EntityNotFoundException("Студент с ID " + request.getStudentId() + " не найден"));
 
@@ -67,21 +73,39 @@ public class TimeService {
         
         timeEntry.setEnd(LocalDateTime.now());
         timeEntry.setBillable(false);
+        timeEntryRepository.save(timeEntry);
+        log.info("Трекинг времени остановлен для студента с ID: {} в {}", request.getStudentId(), timeEntry.getEnd());
 
-        return new TimeStoppedResponse();
+        return new TimeStoppedResponse(
+            timeEntry.getStudent().getId(),
+            timeEntry.getStart(),
+            timeEntry.getEnd(),
+            timeEntry.getType(),
+            timeEntry.getDescription());
     }
 
     @Cacheable(value = "time-entries", key = "#studentId")
     public List<TimeEntryDto> getWeeklyStats(Long studentId) {
+        log.debug("Получение недельной статистики для студента с ID: {}", studentId);
         LocalDateTime today = LocalDateTime.now();
-        LocalDateTime weekStart = today.with(java.time.DayOfWeek.MONDAY);
+        LocalDateTime weekStart = today.with(java.time.DayOfWeek.MONDAY).withHour(0).withMinute(0).withSecond(0).withNano(0);
+        
+        log.info("Диапазон поиска для студента {}: с {} до {}", studentId, weekStart, today);
 
         Student student = studentRepo.findById(studentId)
             .orElseThrow(() -> new EntityNotFoundException("Студент с ID " + studentId + " не найден"));
 
-        List<TimeEntryDto> result;
-        result = timeEntryRepository.findByStudentAndStartBetween(student, weekStart, today)
-            .stream().map(timeEntryMapper::ToTimeEntryDto).collect(Collectors.toList());
+        List<TimeEntry> allEntries = timeEntryRepository.findByStudentAndStartBetween(student, weekStart, today);
+        log.info("Найдено записей в БД для студента {}: {}", studentId, allEntries.size());
+        for (TimeEntry entry : allEntries) {
+            log.debug("Запись: начало={}, конец={}, end is null: {}", entry.getStart(), entry.getEnd(), entry.getEnd() == null);
+        }
+        
+        List<TimeEntryDto> result = allEntries.stream()
+            .map(timeEntryMapper::ToTimeEntryDto)
+            .collect(Collectors.toList());
+        
+        log.info("Получена недельная статистика для студента с ID: {} - {} записей", studentId, result.size());
 
         return result;
     }

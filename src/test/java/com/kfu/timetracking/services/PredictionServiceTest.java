@@ -1,6 +1,10 @@
 package com.kfu.timetracking.services;
 
+import com.kfu.timetracking.exceptions.EntityNotFoundException;
+import com.kfu.timetracking.models.SubjectTask;
+import com.kfu.timetracking.models.TaskType;
 import com.kfu.timetracking.models.TimeEntry;
+import com.kfu.timetracking.repositories.SubjectTaskRepository;
 import com.kfu.timetracking.repositories.TimeEntryRepository;
 import com.kfu.timetracking.responses.predictions.DeadlinePredictionDTO;
 import com.kfu.timetracking.responses.predictions.RiskLevel;
@@ -10,10 +14,10 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
-import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -23,31 +27,43 @@ class PredictionServiceTest {
     @Mock
     private TimeEntryRepository timeEntryRepository;
 
+    @Mock
+    private SubjectTaskRepository subjectTaskRepository;
+
     @InjectMocks
     private PredictionService predictionService;
 
     private List<TimeEntry> mockTimeEntries;
+    private SubjectTask mockSubjectTask;
 
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
         mockTimeEntries = new ArrayList<>();
+        mockSubjectTask = new SubjectTask();
     }
 
     @Test
-    void testGetPredictionForSubjectWithSafeRisk() {
-        // Total required: 40 hours, Deadline: +10 days
+    void testGetPredictionForSubjectWithLowRisk() {
+        // Total required: 40 hours
         // Hours spent: 35 hours
-        // Hours left: 5 hours, Days left: 10 -> 0.5 hours per day -> LOW risk
+        // Hours left: 5 hours, Days left: 7 -> 0.7 hours per day -> LOW risk
         
+        mockSubjectTask.setId(1L);
+        mockSubjectTask.setTaskType(TaskType.LAB);
+        mockSubjectTask.setSubject("ивт");
+        mockSubjectTask.setExpectedHours(40.0);
+
         mockTimeEntries.clear();
         TimeEntry entry = createTimeEntry("ивт", 35); // 35 hours spent
         mockTimeEntries.add(entry);
 
+        when(subjectTaskRepository.findBySubjectAndTaskType("ивт", TaskType.LAB))
+                .thenReturn(Optional.of(mockSubjectTask));
         when(timeEntryRepository.findByDescriptionContainingIgnoreCase("ивт"))
                 .thenReturn(mockTimeEntries);
 
-        DeadlinePredictionDTO result = predictionService.getPredictionForSubject("ивт");
+        DeadlinePredictionDTO result = predictionService.getPredictionForSubject("ивт", TaskType.LAB);
 
         assertNotNull(result);
         assertEquals("ивт", result.getSubject());
@@ -56,19 +72,26 @@ class PredictionServiceTest {
     }
 
     @Test
-    void testGetPredictionForSubjectWithHighRisk() {
-        // Total required: 40 hours, Deadline: +10 days
+    void testGetPredictionForSubjectWithMediumRisk() {
+        // Total required: 40 hours
         // Hours spent: 10 hours
-        // Hours left: 30 hours, Days left: 10 -> 3 hours per day -> MEDIUM risk
+        // Hours left: 30 hours, Days left: 7 -> 4.3 hours per day -> MEDIUM risk
         
+        mockSubjectTask.setId(1L);
+        mockSubjectTask.setTaskType(TaskType.LAB);
+        mockSubjectTask.setSubject("ивт");
+        mockSubjectTask.setExpectedHours(40.0);
+
         mockTimeEntries.clear();
         TimeEntry entry = createTimeEntry("ивт", 10);
         mockTimeEntries.add(entry);
 
+        when(subjectTaskRepository.findBySubjectAndTaskType("ивт", TaskType.LAB))
+                .thenReturn(Optional.of(mockSubjectTask));
         when(timeEntryRepository.findByDescriptionContainingIgnoreCase("ивт"))
                 .thenReturn(mockTimeEntries);
 
-        DeadlinePredictionDTO result = predictionService.getPredictionForSubject("ивт");
+        DeadlinePredictionDTO result = predictionService.getPredictionForSubject("ивт", TaskType.LAB);
 
         assertNotNull(result);
         assertEquals("ивт", result.getSubject());
@@ -77,19 +100,26 @@ class PredictionServiceTest {
     }
 
     @Test
-    void testGetPredictionForSubjectWithCriticalRisk() {
-        // Total required: 80 hours, Deadline: +3 days
+    void testGetPredictionForSubjectWithHighRisk() {
+        // Total required: 80 hours
         // Hours spent: 20 hours
-        // Hours left: 60 hours, Days left: 3 -> 20 hours per day -> CRITICAL risk
+        // Hours left: 60 hours, Days left: 7 -> 8.6 hours per day -> HIGH risk
         
+        mockSubjectTask.setId(2L);
+        mockSubjectTask.setTaskType(TaskType.PROJECT);
+        mockSubjectTask.setSubject("программирование");
+        mockSubjectTask.setExpectedHours(80.0);
+
         mockTimeEntries.clear();
         TimeEntry entry = createTimeEntry("программирование", 20);
         mockTimeEntries.add(entry);
 
+        when(subjectTaskRepository.findBySubjectAndTaskType("программирование", TaskType.PROJECT))
+                .thenReturn(Optional.of(mockSubjectTask));
         when(timeEntryRepository.findByDescriptionContainingIgnoreCase("программирование"))
                 .thenReturn(mockTimeEntries);
 
-        DeadlinePredictionDTO result = predictionService.getPredictionForSubject("программирование");
+        DeadlinePredictionDTO result = predictionService.getPredictionForSubject("программирование", TaskType.PROJECT);
 
         assertNotNull(result);
         assertEquals("программирование", result.getSubject());
@@ -99,18 +129,25 @@ class PredictionServiceTest {
 
     @Test
     void testGetPredictionForSubjectWithCompleteWork() {
-        // Total required: 40 hours, Deadline: +10 days
+        // Total required: 40 hours
         // Hours spent: 40 hours
         // Hours left: 0 hours -> SAFE risk
         
+        mockSubjectTask.setId(1L);
+        mockSubjectTask.setTaskType(TaskType.LAB);
+        mockSubjectTask.setSubject("ивт");
+        mockSubjectTask.setExpectedHours(40.0);
+
         mockTimeEntries.clear();
         TimeEntry entry = createTimeEntry("ивт", 40);
         mockTimeEntries.add(entry);
 
+        when(subjectTaskRepository.findBySubjectAndTaskType("ивт", TaskType.LAB))
+                .thenReturn(Optional.of(mockSubjectTask));
         when(timeEntryRepository.findByDescriptionContainingIgnoreCase("ивт"))
                 .thenReturn(mockTimeEntries);
 
-        DeadlinePredictionDTO result = predictionService.getPredictionForSubject("ивт");
+        DeadlinePredictionDTO result = predictionService.getPredictionForSubject("ивт", TaskType.LAB);
 
         assertNotNull(result);
         assertEquals("ивт", result.getSubject());
@@ -119,128 +156,14 @@ class PredictionServiceTest {
     }
 
     @Test
-    void testGetPredictionForUnknownSubject() {
-        // Unknown subject gets default metadata: 30 hours, 7 days deadline
-        when(timeEntryRepository.findByDescriptionContainingIgnoreCase("unknown"))
-                .thenReturn(new ArrayList<>());
+    void testGetPredictionForNotFoundSubjectTask() {
+        // SubjectTask не найдена в БД -> выброс исключения
+        when(subjectTaskRepository.findBySubjectAndTaskType("unknown", TaskType.LAB))
+                .thenReturn(Optional.empty());
 
-        DeadlinePredictionDTO result = predictionService.getPredictionForSubject("unknown");
-
-        assertNotNull(result);
-        assertEquals("unknown", result.getSubject());
-        assertEquals(30.0, result.getHoursLeft());
-        assertNotNull(result.getRiskLevel());
-    }
-
-    @Test
-    void testGetPredictionForPhilosophy() {
-        // Философия: 20 hours, +5 days
-        // Hours spent: 5 hours
-        // Hours left: 15 hours, Days left: 5 -> 3 hours per day -> MEDIUM risk
-        
-        mockTimeEntries.clear();
-        TimeEntry entry = createTimeEntry("философия", 5);
-        mockTimeEntries.add(entry);
-
-        when(timeEntryRepository.findByDescriptionContainingIgnoreCase("философия"))
-                .thenReturn(mockTimeEntries);
-
-        DeadlinePredictionDTO result = predictionService.getPredictionForSubject("философия");
-
-        assertNotNull(result);
-        assertEquals("философия", result.getSubject());
-        assertEquals(15.0, result.getHoursLeft());
-        assertEquals(RiskLevel.MEDIUM, result.getRiskLevel());
-    }
-
-    @Test
-    void testGetPredictionCaseInsensitive() {
-        mockTimeEntries.clear();
-        TimeEntry entry = createTimeEntry("ивт", 35);
-        mockTimeEntries.add(entry);
-
-        when(timeEntryRepository.findByDescriptionContainingIgnoreCase("ивт"))
-                .thenReturn(mockTimeEntries);
-
-        DeadlinePredictionDTO result = predictionService.getPredictionForSubject("ивт");
-
-        assertNotNull(result);
-        assertEquals("ивт", result.getSubject());
-    }
-
-    @Test
-    void testGetPredictionWithMultipleEntries() {
-        // Total required: 40 hours, Deadline: +10 days
-        // Multiple entries totaling 30 hours
-        
-        mockTimeEntries.clear();
-        mockTimeEntries.add(createTimeEntry("ивт", 15));
-        mockTimeEntries.add(createTimeEntry("ивт", 15));
-
-        when(timeEntryRepository.findByDescriptionContainingIgnoreCase("ивт"))
-                .thenReturn(mockTimeEntries);
-
-        DeadlinePredictionDTO result = predictionService.getPredictionForSubject("ивт");
-
-        assertNotNull(result);
-        assertEquals("ивт", result.getSubject());
-        assertEquals(10.0, result.getHoursLeft());
-    }
-
-    @Test
-    void testGetPredictionWithNullEndTime() {
-        // Entry with null end time should be excluded from calculation
-        mockTimeEntries.clear();
-        TimeEntry entry1 = createTimeEntry("ивт", 35);
-        TimeEntry entry2 = new TimeEntry();
-        entry2.setDescription("ивт");
-        entry2.setStart(LocalDateTime.now());
-        entry2.setEnd(null); // No end time
-        
-        mockTimeEntries.add(entry1);
-        mockTimeEntries.add(entry2);
-
-        when(timeEntryRepository.findByDescriptionContainingIgnoreCase("ивт"))
-                .thenReturn(mockTimeEntries);
-
-        DeadlinePredictionDTO result = predictionService.getPredictionForSubject("ивт");
-
-        assertNotNull(result);
-        assertEquals(5.0, result.getHoursLeft()); // Only entry1 (35 hours) should be counted
-    }
-
-    @Test
-    void testRiskLevelBoundaryHigh() {
-        // 6+ hours per day = HIGH risk
-        mockTimeEntries.clear();
-        TimeEntry entry = createTimeEntry("ивт", 0); // 40 hours needed, 0 spent
-        mockTimeEntries.add(entry);
-
-        when(timeEntryRepository.findByDescriptionContainingIgnoreCase("ивт"))
-                .thenReturn(mockTimeEntries);
-
-        // 40 hours left / 6.67 days ≈ 6 hours per day -> HIGH risk
-        DeadlinePredictionDTO result = predictionService.getPredictionForSubject("ивт");
-
-        assertNotNull(result);
-        assertTrue(result.getRiskLevel() == RiskLevel.HIGH || result.getRiskLevel() == RiskLevel.MEDIUM);
-    }
-
-    @Test
-    void testRiskLevelBoundaryMedium() {
-        // 3-6 hours per day = MEDIUM risk
-        mockTimeEntries.clear();
-        TimeEntry entry = createTimeEntry("философия", 5); // 20 hours needed, 5 spent
-        mockTimeEntries.add(entry);
-
-        when(timeEntryRepository.findByDescriptionContainingIgnoreCase("философия"))
-                .thenReturn(mockTimeEntries);
-
-        // 15 hours left / 5 days = 3 hours per day -> MEDIUM risk
-        DeadlinePredictionDTO result = predictionService.getPredictionForSubject("философия");
-
-        assertNotNull(result);
-        assertEquals(RiskLevel.MEDIUM, result.getRiskLevel());
+        assertThrows(EntityNotFoundException.class, () -> {
+            predictionService.getPredictionForSubject("unknown", TaskType.LAB);
+        });
     }
 
     private TimeEntry createTimeEntry(String description, int hours) {

@@ -17,8 +17,6 @@ import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
-import org.springframework.cache.CacheManager;
-
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -146,9 +144,6 @@ class TimeServiceTest {
 
     @Test
     void testGetWeeklyStatsSuccess() {
-        LocalDateTime now = LocalDateTime.now();
-        LocalDateTime weekStart = now.with(java.time.DayOfWeek.MONDAY);
-
         List<TimeEntry> entries = List.of(testTimeEntry);
         TimeEntryDto dto = new TimeEntryDto();
         dto.setId(1L);
@@ -175,8 +170,6 @@ class TimeServiceTest {
     @Test
     void testGetWeeklyStatsEmpty() {
         LocalDateTime now = LocalDateTime.now();
-        LocalDateTime weekStart = now.with(java.time.DayOfWeek.MONDAY);
-
         when(studentRepository.findById(1L)).thenReturn(Optional.of(testStudent));
         when(timeEntryRepository.findByStudentAndStartBetween(eq(testStudent), any(LocalDateTime.class), any(LocalDateTime.class)))
                 .thenReturn(List.of());

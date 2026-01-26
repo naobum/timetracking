@@ -13,8 +13,31 @@ spring:
         properties:
             hibernate:
                 dialect: org.hibernate.dialect.PostgreSQLDialect
+
+logging:
+    level:
+        root: INFO
+        com.kfu.timetracking: INFO
+        com.kfu.timetracking.security: DEBUG
+        org.springframework.security: WARN
+        org.hibernate.SQL: DEBUG
+    file:
+        name: logs/application.log
+        max-size: 10MB
+        max-history: 30
+    pattern:
+        console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
+        file: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
                 
 jwt:
     secret: your-secret-key-here-at-least-256-bits-long-for-HS256
     access-expiration: 900000      # 15 минут
     refresh-expiration: 604800000  # 7 дней
+telegram:
+    bot:
+        name: "TimeTrackingBot"
+        token: "token_here"
+        chat-id: "936389974" # чат id для логов
+        enabled: false
+        log-all-requests: true
+        filter-public-endpoints: true
